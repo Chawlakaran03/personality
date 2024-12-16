@@ -1,6 +1,7 @@
-streamlit==1.26.0
-py_avataaars==1.2.2
-pillow==9.4.0
-matplotlib==3.7.1
-transformers==4.35.0
-torch==2.0.1
+streamlit
+py_avataaars
+pillow
+matplotlib
+transformers
+torch
+tokenizers
