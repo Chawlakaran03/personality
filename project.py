@@ -4,6 +4,8 @@ from PIL import Image
 import base64
 import os
 import matplotlib.pyplot as plt
+from transformers import AutoModelForSequenceClassification, AutoTokenizer
+import torch
 
 # Helper function to create the avatar safely
 def create_avatar(options):
@@ -40,12 +42,30 @@ def imagedownload(filename):
 def plot_personality(traits):
     labels = list(traits.keys())
     values = list(traits.values())
-    fig, ax = plt.subplots()
+    fig, ax = plt.subplots(figsize=(10, 6))
     ax.bar(labels, values, color='skyblue')
     ax.set_title("Personality Traits")
     ax.set_ylabel("Scores")
     ax.set_ylim(0, 100)
     st.pyplot(fig)
+
+# Load NLP model and tokenizer
+@st.cache_resource
+def load_nlp_model():
+    model_name = "cardiffnlp/twitter-roberta-base-emotion"  # Public model
+    model = AutoModelForSequenceClassification.from_pretrained(model_name)
+    tokenizer = AutoTokenizer.from_pretrained(model_name)
+    return model, tokenizer
+
+# NLP-based personality analysis
+def nlp_personality_analysis(description):
+    model, tokenizer = load_nlp_model()
+    inputs = tokenizer(description, return_tensors="pt", truncation=True, padding=True, max_length=512)
+    outputs = model(**inputs)
+    scores = torch.softmax(outputs.logits, dim=1).detach().numpy()[0]
+    traits = ["Openness", "Conscientiousness", "Extraversion", "Agreeableness", "Neuroticism"]
+    return {trait: round(float(score * 100), 2) for trait, score in zip(traits, scores)}
+
 
 # Page title
 st.markdown("""
@@ -85,51 +105,16 @@ if avatar:
 # Personality analysis section
 st.markdown("---")
 st.header("Advanced Personality Insights")
-st.write("**Describe yourself briefly by selecting your traits below:**")
+st.write("**Describe yourself briefly by entering a description of your personality below:**")
 
-# Personality traits
-traits = {
-    "Extraversion": st.slider("Extraversion (Outgoing vs. Reserved)", 0, 100, 50),
-    "Agreeableness": st.slider("Agreeableness (Compassionate vs. Critical)", 0, 100, 50),
-    "Conscientiousness": st.slider("Conscientiousness (Organized vs. Careless)", 0, 100, 50),
-    "Neuroticism": st.slider("Neuroticism (Sensitive vs. Confident)", 0, 100, 50),
-    "Openness": st.slider("Openness (Creative vs. Practical)", 0, 100, 50)
-}
+# Free text input for NLP analysis
+description = st.text_area("Describe your personality in a few sentences:")
+traits = {}
 
-# Analyze personality traits
-if st.button("Analyze Personality"):
-    st.subheader("Your Personality Profile")
-    st.write("Based on your self-assessment, here are your insights:")
-
-    # Detailed breakdown
-    if traits["Extraversion"] > 70:
-        st.write("- **Extraverted:** You enjoy socializing and feel energized by interacting with people.")
-    elif traits["Extraversion"] < 30:
-        st.write("- **Introverted:** You prefer solitary activities and value introspection.")
-    
-    if traits["Agreeableness"] > 70:
-        st.write("- **Empathetic:** You are highly compassionate and enjoy helping others.")
-    elif traits["Agreeableness"] < 30:
-        st.write("- **Critical Thinker:** You value rationality and may come across as straightforward.")
-
-    if traits["Conscientiousness"] > 70:
-        st.write("- **Highly Organized:** You are disciplined and reliable, often planning ahead.")
-    elif traits["Conscientiousness"] < 30:
-        st.write("- **Spontaneous:** You prefer flexibility over structure in your life.")
-
-    if traits["Neuroticism"] > 70:
-        st.write("- **Emotionally Sensitive:** You experience emotions intensely and may need mindfulness practices.")
-    elif traits["Neuroticism"] < 30:
-        st.write("- **Emotionally Resilient:** You maintain calm and confidence even under pressure.")
-
-    if traits["Openness"] > 70:
-        st.write("- **Highly Creative:** You enjoy exploring new ideas and experiences.")
-    elif traits["Openness"] < 30:
-        st.write("- **Practical and Grounded:** You prefer tried-and-tested methods.")
-
-    st.write("**Summary:** These traits can help you identify areas for growth and improvement.")
-
-    # Show visualization
+if description:
+    st.write("Analyzing your personality description...")
+    traits = nlp_personality_analysis(description)
+    st.write("Personality Traits (from NLP):", traits)
     plot_personality(traits)
 
 st.markdown("---")
