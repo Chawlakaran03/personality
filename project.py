@@ -52,7 +52,7 @@ def plot_personality(traits):
 # Load NLP model and tokenizer
 @st.cache_resource
 def load_nlp_model():
-    model_name = "cardiffnlp/twitter-roberta-base-emotion"  # Public model
+    model_name = "Minej/bert-base-personality"  # Public model
     model = AutoModelForSequenceClassification.from_pretrained(model_name)
     tokenizer = AutoTokenizer.from_pretrained(model_name)
     return model, tokenizer
